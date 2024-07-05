@@ -1,0 +1,71 @@
+﻿@model IEnumerable<Item>
+@using Microsoft.AspNetCore.SignalR.Client
+@{
+    ViewData["Title"] = "Items";
+}
+
+<h1>Items</h1>
+
+<form asp-action="Create" method="post">
+    <input type="text" name="Name" placeholder="New Item" />
+    <button type="submit">Add</button>
+</form>
+
+<ul id="itemList">
+    @foreach (var item in Model)
+    {
+        <li id="item-@item.Id">
+            @item.Name
+            <button onclick="editItem(@item.Id)">Edit</button>
+            <button onclick="deleteItem(@item.Id)">Delete</button>
+        </li>
+    }
+</ul>
+
+<script src="~/lib/microsoft/signalr/signalr.js"></script>
+<script>
+    const connection = new signalR.HubConnectionBuilder()
+        .withUrl("/itemHub")
+        .build();
+
+    connection.on("ReceiveItem", (item) => {
+        const itemList = document.getElementById("itemList");
+        const li = document.createElement("li");
+        li.id = `item-${item.id}`;
+        li.innerHTML = `${item.name} <button onclick="editItem(${item.id})">Edit</button> <button onclick="deleteItem(${item.id})">Delete</button>`;
+        itemList.appendChild(li);
+    });
+
+    connection.on("UpdateItem", (item) => {
+        const li = document.getElementById(`item-${item.id}`);
+        li.innerHTML = `${item.name} <button onclick="editItem(${item.id})">Edit</button> <button onclick="deleteItem(${item.id})">Delete</button>`;
+    });
+
+    connection.on("DeleteItem", (id) => {
+        const li = document.getElementById(`item-${id}`);
+        li.remove();
+    });
+
+    connection.start();
+
+    function editItem(id) {
+        const itemName = prompt("Enter new name:");
+        if (itemName) {
+            const form = document.createElement("form");
+            form.method = "post";
+            form.action = "/Items/Edit";
+            form.innerHTML = `<input type="hidden" name="Id" value="${id}" /><input type="hidden" name="Name" value="${itemName}" />`;
+            document.body.appendChild(form);
+            form.submit();
+        }
+    }
+
+    function deleteItem(id) {
+        const form = document.createElement("form");
+        form.method = "post";
+        form.action = "/Items/Delete";
+        form.innerHTML = `<input type="hidden" name="id" value="${id}" />`;
+        document.body.appendChild(form);
+        form.submit();
+    }
+</script>
